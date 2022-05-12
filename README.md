@@ -2,11 +2,14 @@
 ## 💡 나만의 웹서버를 만들어보기! (프록시 서버까지)
 
 클라이언트의 request를 받고, response를 내어주는 웹서버를 만들어봅니다. 내 웹서버는 어떤 기능들의 모음일까요?
+
 ‘컴퓨터 시스템’ 교재의 11장을 보면서 차근 차근 만들어주세요.(기본 코드는 모두 있습니다!)
+
 웹 서버를 완성했으면 프록시(proxy) 서버 과제에 도전합니다.
+
 http://csapp.cs.cmu.edu/3e/proxylab.pdf
 출처: CMU (카네기멜론)
-https://github.com/SWJungle/webproxy-jungle 의 내용대로 진행합니다.
+
 # 진행방법
 - 책에 있는 코드를 기반으로, tiny 웹서버를 완성하기 (tiny/tiny.c, tiny/cgi-bin/adder.c 완성)
 - AWS 혹은 container 사용시 외부로 포트 여는 것을 잊지 말기
