@@ -11,9 +11,9 @@
 void doit(int fd);
 void read_requesthdrs(rio_t *rp);
 int parse_uri(char *uri, char *filename, char *cgiargs);
-void serve_static(int fd, char *filename, int filesize);
+void serve_static(int fd, char *filename, int filesize,char *method);
 void get_filetype(char *filename, char *filetype);
-void serve_dynamic(int fd, char *filename, char *cgiargs);
+void serve_dynamic(int fd, char *filename, char *cgiarg, char *method);
 void clienterror(int fd, char *cause, char *errnum, char *shortmsg,
                  char *longmsg);
 
@@ -68,7 +68,7 @@ void doit(int fd){
   // TINY는 GET method만 지원하기에 클라이언트가 다른 메소드를 요청하면
   // 에러 메시지를 보내고, main routin으로 돌아온다.
 
-  if (strcasecmp(method, "GET")){
+  if (strcasecmp(method, "GET") && strcasecmp(method, "HEAD")){
     clienterror(fd, method, "501", "Not implemented",
                 "GET요청만 받을 수 있습니다.");
     return;
@@ -95,7 +95,7 @@ void doit(int fd){
       return;
     }
     //그렇다면 정적 컨텐츠를 클라이언트에게 제공
-    serve_static(fd, filename, sbuf.st_size);
+    serve_static(fd, filename, sbuf.st_size, method);
   }
   //동적 컨텐츠 제공
   else{
@@ -105,7 +105,7 @@ void doit(int fd){
       return;
     }
     //그렇다면 동적 컨텐츠를 클라이언트에게 제공
-    serve_dynamic(fd, filename, cgiargs);
+    serve_dynamic(fd, filename, cgiargs, method);
   } 
   
 }
@@ -210,11 +210,15 @@ void get_filetype(char *filename, char *filetype){
     strcpy(filetype,"image/jpeg");
   }else if(strstr(filename, ".mp4")){
     strcpy(filetype, "video/mp4");
+  }else if(strstr(filename, ".mpeg")){
+    strcpy(filetype, "video/mpeg");
+  }else if(strstr(filename, ".MOV")){
+    strcpy(filetype, "video/MOV");
   }else{
     strcpy(filetype, "text/plain");
   }
 }
-void serve_static(int fd, char *filename, int filesize){
+void serve_static(int fd, char *filename, int filesize, char *method){
   /*
   1. 주석 처리된 첫번째 경우 Mmap함수를 이용해 바로 메모리를 할당하며
     srcfd의 파일 값을 배정한다.
@@ -239,12 +243,18 @@ void serve_static(int fd, char *filename, int filesize){
   /* 서버쪽에 출력 */
   printf("Response headers:\n");
   printf("%s", buf);
+  if (!strcasecmp(method, "HEAD")){
+    return;
+  }
   /* Send response body to client */
   srcfd = Open(filename, O_RDONLY, 0);
-  srcp = Mmap(0, filesize, PROT_READ, MAP_PRIVATE, srcfd, 0);
+  // srcp = Mmap(0, filesize, PROT_READ, MAP_PRIVATE, srcfd, 0);
+  srcp = (char*)Malloc(filesize);
+  Rio_readn(srcfd, srcp, filesize);
   Close(srcfd);
   Rio_writen(fd, srcp, filesize);
-  Munmap(srcp, filesize);
+  // Munmap(srcp, filesize);
+  free(srcp);
 }
 void read_requesthdrs(rio_t *rp){
   char buf[MAXLINE];
@@ -258,7 +268,7 @@ void read_requesthdrs(rio_t *rp){
   }
   return;
 }
-void serve_dynamic(int fd, char *filename, char *cgiargs){
+void serve_dynamic(int fd, char *filename, char *cgiargs, char *method){
   char buf[MAXLINE], *emptylist[]={NULL};
   /* Return first part of HTTP response */
   sprintf(buf, "HTTP/1.0 200 OK\r\n");
@@ -270,6 +280,7 @@ void serve_dynamic(int fd, char *filename, char *cgiargs){
     /* Child process 생성 - 부모 프로세스(지금) 을 복사한*/
     /* Real server would set all CGI vars hear */
     setenv("QUERY_STRING", cgiargs, 1); //환경변수 설정
+    setenv("REQUEST_METHOD", method, 1);
     Dup2(fd, STDOUT_FILENO); 
     // 자식프로세스의 표준 출력을 연결 파일 식별자로 재지정
     Execve(filename, emptylist, environ);
