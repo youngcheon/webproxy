@@ -6,7 +6,7 @@
 
 int main(void)
 {
-    char *buf, *p;
+    char *buf, *p,*method;
     char arg1[MAXLINE], arg2[MAXLINE], content[MAXLINE];
     int n1=0, n2=0;
 
@@ -19,7 +19,7 @@ int main(void)
         n1 = atoi(arg1);
         n2 = atoi(arg2);
     }
-
+    method = getenv("REQUEST_METHOD");
     //response body만들기
     sprintf(content, "QUERY_STRING=%s", buf);
     sprintf(content, "Welcome: ");
@@ -33,6 +33,9 @@ int main(void)
     printf("Content-length : %d\r\n", (int)strlen(content));
     printf("Content-type: text/html\r\n\r\n");
     printf("%s", content);
+    if (strcasecmp(method, "HEAD") != 0)
+        printf("%s", content);
+
     fflush(stdout);
     exit(0);
 }
